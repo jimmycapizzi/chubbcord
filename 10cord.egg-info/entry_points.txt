@@ -1,0 +1,2 @@
+[console_scripts]
+10cord = src.main:main
