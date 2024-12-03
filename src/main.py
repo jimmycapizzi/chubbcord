@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # --------------------------------------------------
-# 10cord.py - A Discord client, entirely in your terminal.
-# Quentin Dufournet, 2023
+# chubbcord.py - A Discord client, entirely in your terminal.
+#  Inspired by 10cord - Quentin Dufournet, 2023
 # --------------------------------------------------
 # Built-in
 import os
@@ -17,7 +17,6 @@ from emoji import EMOJI_DATA
 import requests
 import fake_useragent
 from rich import print as rprint
-
 
 def parse_args():
     """
@@ -182,7 +181,7 @@ class MyClient():
         if '<@' in content and '<@&' not in content:
             # TODO: rework this part to avoid request as mentions is located
             # in the message requests
-            user_id = content.split('<@')[1].split('>')[0]
+            user_id = content.split('<@')[1].split('>')[0].strip('!')
             if user_id not in self.ids:
                 self.ids[user_id] = self.get_username_from_id(user_id)
             username_in_content = self.ids[user_id]
@@ -262,6 +261,8 @@ class MyClient():
         for message in messages:
             date = message['timestamp'].replace('T', ' - ').split('.')[0]
             username = message['author']['global_name']
+            if username == None:
+            	username = message['author']['username']
             content = message['content']
             content = self.manage_mentions(content)
             content = self.manage_attachments(content, message)
@@ -604,17 +605,17 @@ class MyClient():
         if command == ':help':
             rprint()
             rprint('[#7289DA]' +
-                   '==============================\n' +
-                   '|[#E01E5A]       Commands list:       [/#E01E5A]|\n' +
-                   '==============================\n'
-                   '| :help - Show this help     |\n' +
-                   '| :q - Exit 10cord           |\n' +
-                   '| :attach - Attach a file    |\n' +
-                   '| :cr - Clear and Refresh    |\n' +
-                   '| :li - List Guilds & Chan.  |\n'
-                   '| :fr - List Friends         |\n'
-                   '| :we - Print welcome message|\n'
-                   '=============================='
+                   ' ==============================\n' +
+                   ' |[#E01E5A]       Commands list:       [/#E01E5A]|\n' +
+                   ' ==============================\n'
+                   ' | :help - Show this help     |\n' +
+                   ' | :q - Exit chubbcord        |\n' +
+                   ' | :attach - Attach a file    |\n' +
+                   ' | :cr - Clear and Refresh    |\n' +
+                   ' | :li - List Guilds & Chan.  |\n'
+                   ' | :fr - List Friends         |\n'
+                   ' | :we - Print welcome message|\n'
+                   ' =============================='
                    '[/#7289DA]'
                    )
             rprint()
@@ -696,39 +697,22 @@ class MyClient():
     def print_welcome(self):
         """ Print the welcome message and the commands list """
 
-        welcome_message = f'Welcome [magenta]{self.get_username_from_id(self.user_id)}[/magenta] !'
-        length_welcome_message = len(welcome_message.replace(
-            '[magenta]', '').replace('[/magenta]', ''))
-        if length_welcome_message < 80:
-            welcome_message = '|' + (' ' * ((80 - length_welcome_message) // 2)) + \
-                welcome_message + \
-                (' ' * ((80 - length_welcome_message) // 2)) + '|'
-
         rprint('\n[#7289DA]' +
-               '=================================================================================\n' +
-               '|[#E01E5A]     ▄▄▄▄      ▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄   [/#E01E5A]|\n' +
-               '|[#E01E5A]   ▄█░░░░▌    ▐░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░▌  [/#E01E5A]|\n' +
-               '|[#E01E5A]  ▐░░▌▐░░▌   ▐░█░█▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀█░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A]   ▀▀ ▐░░▌   ▐░▌▐░▌    ▐░▌▐░▌          ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌       ▐░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A]      ▐░░▌   ▐░▌ ▐░▌   ▐░▌▐░▌          ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A]      ▐░░▌   ▐░▌  ▐░▌  ▐░▌▐░▌          ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A]      ▐░░▌   ▐░▌   ▐░▌ ▐░▌▐░▌          ▐░▌       ▐░▌▐░█▀▀▀▀█░█▀▀ ▐░▌       ▐░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A]      ▐░░▌   ▐░▌    ▐░▌▐░▌▐░▌          ▐░▌       ▐░▌▐░▌     ▐░▌  ▐░▌       ▐░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A]  ▄▄▄▄█░░█▄▄▄▐░█▄▄▄▄▄█░█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌▐░▌      ▐░▌ ▐░█▄▄▄▄▄▄▄█░▌ [/#E01E5A]|\n' +
-               '|[#E01E5A] ▐░░░░░░░░░░░▌▐░░░░░░░░░▌ ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░░░░░░░░░░▌  [/#E01E5A]|\n' +
-               '|[#E01E5A]  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀   ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀▀▀▀▀▀▀▀▀▀   [/#E01E5A]|\n' +
-               '=================================================================================\n' +
-               f'{welcome_message}\n' +
-               '=================================================================================\n'
-               '| [magenta]Available commands: [/magenta]                                                          |\n' +
-               '|   :help - Show this help                                                      |\n' +
-               '|   :q - Exit 10cord                                                            |\n' +
-               '|   :attach - Attach a file (ex: :attach:/home/user/poop.png:Look, it\'s you!)   |\n' +
-               '|   :cr - Clear and Refresh the screen                                          |\n' +
-               '|   :li - List Guilds & Channels                                                |\n'
-               '|   :fr - List Friends                                                          |\n'
-               '|   :we - Print welcome message                                                 |\n'
-               '=================================================================================[/#7289DA]'
+               f'            [dark_orange]░█▀▀░█░█░█░█░█▀▄░█▀▄░█▀▀░█▀█░█▀▄░█▀▄[/dark_orange]            \n' +
+               '            [dark_orange]░█░░░█▀█░█░█░█▀▄░█▀▄░█░░░█░█░█▀▄░█░█[/dark_orange]            \n' +
+               '            [dark_orange]░▀▀▀░▀░▀░▀▀▀░▀▀░░▀▀░░▀▀▀░▀▀▀░▀░▀░▀▀░[/dark_orange]            \n' +
+               f'                Logged in as:    [dark_orange]{self.get_username_from_id(self.user_id)}[/dark_orange]\n' +
+               ' ===========================================================\n'
+               ' | [dark_orange]Available commands: [/dark_orange]                                    |\n' +
+               ' |   :help - Show this help                                |\n' +
+               ' |   :q - Exit chubbcord                                   |\n' +
+               ' |   :attach - Attach a file                               |\n' +
+               ' |     (ex: :attach:/home/user/poop.png:Look, it\'s you!)   |\n' +
+               ' |   :cr - Clear and Refresh the screen                    |\n' +
+               ' |   :li - List Guilds & Channels                          |\n'
+               ' |   :fr - List Friends                                    |\n'
+               ' |   :we - Print welcome message                           |\n'
+               ' ===========================================================[/#7289DA]'
                )
 
     def main_loop(self):
@@ -765,7 +749,9 @@ class MyClient():
         The main function starts a thread for the main loop and then waits for user input to send a
         message.
         """
-
+        os.system(
+            f'termtitle "chubbcord: a discord client -- {self.get_username_from_id(self.user_id)}"'
+        )
         self.print_welcome()
 
         self.running = False

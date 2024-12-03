@@ -1,8 +1,0 @@
-Metadata-Version: 2.1
-Name: 10cord
-Version: 1.0
-License-File: LICENSE
-Requires-Dist: fake-useragent==1.2.1
-Requires-Dist: requests==2.31.0
-Requires-Dist: rich==13.5.2
-Requires-Dist: emoji==2.8.0
