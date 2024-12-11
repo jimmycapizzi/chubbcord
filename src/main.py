@@ -17,6 +17,7 @@ from emoji import EMOJI_DATA
 import requests
 import fake_useragent
 from rich import print as rprint
+import re
 
 def parse_args():
     """
@@ -179,14 +180,14 @@ class MyClient():
         """
 
         if '<@' in content and '<@&' not in content:
-            # TODO: rework this part to avoid request as mentions is located
-            # in the message requests
-            user_id = content.split('<@')[1].split('>')[0].strip('!')
-            if user_id not in self.ids:
-                self.ids[user_id] = self.get_username_from_id(user_id)
-            username_in_content = self.ids[user_id]
-            content = content.replace(
-                f'<@{user_id}>', f'[bold][dark_orange]@{username_in_content}[/dark_orange][/bold]')
+            all_user_id = re.findall("<@.?\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d\d>", content)
+            for user_id in all_user_id:
+                user_id = content.split('<@')[1].split('>')[0].strip('!')
+                if user_id not in self.ids:
+                    self.ids[user_id] = self.get_username_from_id(user_id)
+                username_in_content = self.ids[user_id]
+                content = content.replace(
+                        f'<@{user_id}>', f'[bold][dark_orange]@{username_in_content}[/dark_orange][/bold]')
         if '@everyone' in content:
             content = content.replace(
                 '@everyone', '[bold][dark_orange]@everyone[/dark_orange][/bold]')
