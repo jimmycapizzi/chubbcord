@@ -55,7 +55,7 @@ If you do not care about security, or saving your token in plain text you you ca
 
 ```
 ~/.chubbcord/user.token.json
-$ cat user.toke.json
+$ cat user.token.json
 {
 	"token": "YUgINOINoiJmO.you.get.the.idea.IUHhby9h.PnIOi"
 }
