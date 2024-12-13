@@ -53,12 +53,13 @@ If you want to use a custom token, you can use the `-t` option, along with your 
 
 If you do not care about security, or saving your token in plain text you you can have automatic logins.
 
+```
 ~/.chubbcord/user.token.json
 $ cat user.toke.json
 {
 	"token": "YUgINOINoiJmO.you.get.the.idea.IUHhby9h.PnIOi"
 }
-
+```
 
 ### Selecting a channel
 When you launch chubbcord, and type `:li` or `:dm`, a list of all your guilds and channels or friends will be displayed. You can select a channel by typing its ID and pressing enter.
