@@ -1,4 +1,15 @@
+altgraph==0.17.4
+certifi==2024.8.30
+charset-normalizer==3.4.0
+emoji==2.8.0
 fake-useragent==1.2.1
+idna==3.10
+markdown-it-py==3.0.0
+mdurl==0.1.2
+packaging==24.2
+prompt_toolkit==3.0.48
+Pygments==2.18.0
 requests==2.31.0
 rich==13.5.2
-emoji==2.8.0
+urllib3==2.2.3
+wcwidth==0.2.13
