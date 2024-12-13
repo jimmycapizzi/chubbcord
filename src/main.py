@@ -16,8 +16,17 @@ import subprocess as sp
 from emoji import EMOJI_DATA
 import requests
 import fake_useragent
+
 from rich import print as rprint
+from rich.console import Console
+
+from prompt_toolkit import prompt
+from prompt_toolkit.patch_stdout import patch_stdout
+
 import re
+
+homedir = os.path.expanduser('~')
+confdir = os.path.expanduser('~/.chubbcord')
 
 def parse_args():
     """
@@ -30,12 +39,14 @@ def parse_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'email',
+        '-e', '--email',
         help='User email',
+        default='foo',
     )
     parser.add_argument(
-        'password',
+        '-p', '--password',
         help='User password',
+        default='foo',
     )
     parser.add_argument(
         '-c', '--channel',
@@ -61,12 +72,18 @@ class MyClient():
         self.args = parse_args()
         self.url = 'https://discord.com/api/v9'
 
-        if not os.path.exists('tmp'):
-            os.mkdir('tmp')
+        if not os.path.exists(confdir):
+            os.mkdir(confdir)
+        if not os.path.exists(confdir + '/tmp'):
+             os.mkdir(confdir + '/tmp')
 
         if not self.args.token:
-            if os.path.exists('tmp/token.json'):
-                with open('tmp/token.json', 'r', encoding='utf-8') as f:
+            if os.path.exists(homedir + '/.chubbcord/user.token.json'):
+                with open(homedir + '/.chubbcord/user.token.json', 'r', encoding='utf-8') as t:
+                    data = json.load(t)
+                    self.args.token = data['token']
+            elif os.path.exists(homedir + '/.chubbcord/token.json'):
+                with open(homedir + '/.chubbcord/token.json', 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     self.user_id = data['user_id']
                     self.token = data['token']
@@ -80,6 +97,7 @@ class MyClient():
             'User-Agent': fake_useragent.UserAgent().random,
             'Authorization': self.args.token if self.args.token else self.token
         }
+
 
         if self.args.token:
             self.user_id = self.get_my_id()
@@ -136,7 +154,7 @@ class MyClient():
         self.token = response.json()['token']
         self.timestamp = str(time.time())
 
-        with open('tmp/token.json', 'w', encoding='utf-8') as f:
+        with open(homedir + '/.chubbcord/token.json', 'w', encoding='utf-8') as f:
             json.dump({'user_id': self.user_id, 'token': self.token,
                       'timestamp': self.timestamp}, f, indent=4)
 
@@ -220,7 +238,7 @@ class MyClient():
                         message['attachments'][0]['url'], headers=self.headers
                     )
                     if file.status_code == 200:
-                        with open(f'./tmp/{message["attachments"][0]["filename"]}', 'wb') as f:
+                        with open(f'{confdir}/tmp/{message["attachments"][0]["filename"]}', 'wb') as f:
                             f.write(file.content)
                         self.attachments.append(
                             message['attachments'][0]['url']
@@ -243,11 +261,12 @@ class MyClient():
             referenced_message = self.manage_mentions(referenced_message)
             referenced_message = self.manage_attachments(
                 referenced_message, message['referenced_message'])
-            content += f'\n [magenta]>>[/magenta] [italic][bright_black]{referenced_message}[/bright_black][/italic]'
+            content += f'\n  [magenta][/magenta] [italic][bright_black]{referenced_message}[/bright_black][/italic]'
         except KeyError:
             referenced_message = None
         except TypeError:
             referenced_message = "Original Message was deleted."
+            content += f'\n  [magenta][/magenta] [italic][bright_black]{referenced_message}[/bright_black][/italic]'
 
         return content
 
@@ -274,9 +293,11 @@ class MyClient():
 
             if message['attachments'] != [] and self.args.attach:
                 if os.name == 'posix' and 'Chafa version' in sp.getoutput('chafa --version'):
+                    rprint(f' ')
                     os.system(
-                        f'chafa ./tmp/{message["attachments"][0]["filename"]} --size=65x20 --animate=off'
+                        f'chafa {homedir}/.chubbcord/tmp/{message["attachments"][0]["filename"]} --size=80x25 --animate=off'
                     )
+                    rprint(f' ')
 
     def diff_messages(self, messages1, messages2):
         """
@@ -317,8 +338,8 @@ class MyClient():
             raise Exception(
                 f'Send message failed : {response.status_code} {response.text}')
 
-        """self.refresh_screen()"""
-        """os.system(f'printf "\eM\r\e[2K"')"""
+        #self.refresh_screen()
+        #os.system(f'printf "\eM\r\e[2K"')
 
         return response.json()
 
@@ -484,7 +505,7 @@ class MyClient():
 
         for friend in self.friends:
             local_id += 1
-            friend_print = f'|  [#E01E5A]{local_id}[/#E01E5A] - ' + \
+            friend_print = f'   [#E01E5A]{local_id}[/#E01E5A] - ' + \
                 f'{friend["recipients"][0]["username"]} - {friend["id"]}'
             friend_length = len(friend_print.replace(
                 '[#E01E5A]', '').replace('[/#E01E5A]', ''))
@@ -504,13 +525,13 @@ class MyClient():
                     '[#E01E5A]', '').replace('[/#E01E5A]', '')) + 1
 
             friend_print += ' ' * \
-                (80 - friend_length) + '|\n'
+                (80 - friend_length) + ' \n'
 
             self.friends[self.friends.index(friend)]['local_id'] = local_id
 
             content += friend_print
 
-        content += '================================================================================='
+        content += ' '
 
         return content
 
@@ -543,7 +564,7 @@ class MyClient():
         local_id = 0
 
         for guild in self.guilds:
-            guild_print = f'|  - {guild["name"]} -'
+            guild_print = f'   - {guild["name"]} -'
             if guild['owner']:
                 guild_print += ' [#E01E5A](owner)[/#E01E5A]'
 
@@ -553,13 +574,13 @@ class MyClient():
 
             if guild_length < 80:
                 guild_print += ' ' * \
-                    (80 - guild_length) + '|\n'
+                    (79 - guild_length) + ' \n'
 
             content += guild_print
 
             for channel in self.guilds[self.guilds.index(guild)]['channels']:
                 local_id += 1
-                channel_print = f'|     [#E01E5A]{local_id}[/#E01E5A] - {channel["name"]} - {channel["id"]}'
+                channel_print = f'      [#E01E5A]{local_id}[/#E01E5A] - {channel["name"]} - {channel["id"]}'
                 channel_length = len(channel_print.replace(
                     '[#E01E5A]', '').replace('[/#E01E5A]', ''))
 
@@ -575,14 +596,14 @@ class MyClient():
                         '[#E01E5A]', '').replace('[/#E01E5A]', '')) + 1
 
                 channel_print += ' ' * \
-                    (80 - channel_length) + '|\n'
+                    (79 - channel_length) + ' \n'
 
                 self.guilds[self.guilds.index(guild)]['channels'][self.guilds[self.guilds.index(guild)]['channels'].index(
                     channel)]['local_id'] = local_id
 
                 content += channel_print
 
-        content += '================================================================================='
+        content += ' '
 
         return content
 
@@ -606,17 +627,15 @@ class MyClient():
         if command == ':help':
             rprint()
             rprint('[#7289DA]' +
-                   ' ==============================\n' +
-                   ' |[#E01E5A]       Commands list:       [/#E01E5A]|\n' +
-                   ' ==============================\n'
-                   ' | :help - Show this help     |\n' +
-                   ' | :q - Exit chubbcord        |\n' +
-                   ' | :attach - Attach a file    |\n' +
-                   ' | :cr - Clear and Refresh    |\n' +
-                   ' | :li - List Guilds & Chan.  |\n'
-                   ' | :fr - List Friends         |\n'
-                   ' | :we - Print welcome message|\n'
-                   ' =============================='
+                   '    [dark_orange]COMMAND LIST:       [/dark_orange] \n' +
+                   '      :help - Show this help      \n' +
+                   '      :q - Exit chubbcord         \n' +
+                   '      :attach - Attach a file     \n' +
+                   '        (ex: :attach:poop.png:text)\n'+
+                   '      :cr - Clear and Refresh     \n' +
+                   '      :li - List Guilds & Chan.   \n'
+                   '      :dm - List Direct Messages  \n'
+                   '      :we - Print welcome message \n'
                    '[/#7289DA]'
                    )
             rprint()
@@ -649,17 +668,25 @@ class MyClient():
 
         elif command == ':li':
             rprint('\n[#7289DA]' +
-                   '=================================================================================\n' +
+                   ' \n' +
                    self.rprint_guilds()
                    )
 
-            self.args.channel = input('Channel ID: ')
+            with patch_stdout(raw=True):
+                self.args.channel = prompt('Channel ID: ')
             try:
                 int(self.args.channel)
             except ValueError:
-                self.kill_thread = True
-                self.main_loop_thread.join()
+                if self.running:
+                    self.kill_thread = True
+                    self.main_loop_thread.join()
                 sys.exit('Channel ID must be an integer')
+            except KeyboardInterrupt:
+                if self.running:
+                    self.kill_thread = True
+                    self.main_loop_thread.join()
+                self.clean()
+                sys.exit()
 
             if self.running:
                 self.kill_thread = True
@@ -671,19 +698,27 @@ class MyClient():
             self.main_loop_thread.start()
             self.refresh_screen()
 
-        elif command == ':fr':
+        elif command == ':dm':
             rprint('\n[#7289DA]' +
-                   '=================================================================================\n' +
+                   ' \n' +
                    self.rprint_friends()
                    )
 
-            self.args.channel = input('Channel ID: ')
+            with patch_stdout(raw=True):
+                self.args.channel = prompt('Message ID: ')
             try:
                 int(self.args.channel)
             except ValueError:
-                self.kill_thread = True
-                self.main_loop_thread.join()
+                if self.running:
+                    self.kill_thread = True
+                    self.main_loop_thread.join()
                 sys.exit('Channel ID must be an integer')
+            except KeyboardInterrupt:
+                if self.running:
+                    self.kill_thread = True
+                    self.main_loop_thread.join()
+                self.clean()
+                sys.exit()
 
             if self.running:
                 self.kill_thread = True
@@ -697,23 +732,14 @@ class MyClient():
 
     def print_welcome(self):
         """ Print the welcome message and the commands list """
-
+        whoami = self.get_username_from_id(self.user_id)
         rprint('\n[#7289DA]' +
-               f'            [dark_orange]░█▀▀░█░█░█░█░█▀▄░█▀▄░█▀▀░█▀█░█▀▄░█▀▄[/dark_orange]            \n' +
-               '            [dark_orange]░█░░░█▀█░█░█░█▀▄░█▀▄░█░░░█░█░█▀▄░█░█[/dark_orange]            \n' +
-               '            [dark_orange]░▀▀▀░▀░▀░▀▀▀░▀▀░░▀▀░░▀▀▀░▀▀▀░▀░▀░▀▀░[/dark_orange]            \n' +
-               f'                Logged in as:    [dark_orange]{self.get_username_from_id(self.user_id)}[/dark_orange]\n' +
-               ' ===========================================================\n'
-               ' | [dark_orange]Available commands: [/dark_orange]                                    |\n' +
-               ' |   :help - Show this help                                |\n' +
-               ' |   :q - Exit chubbcord                                   |\n' +
-               ' |   :attach - Attach a file                               |\n' +
-               ' |     (ex: :attach:/home/user/poop.png:Look, it\'s you!)   |\n' +
-               ' |   :cr - Clear and Refresh the screen                    |\n' +
-               ' |   :li - List Guilds & Channels                          |\n'
-               ' |   :fr - List Friends                                    |\n'
-               ' |   :we - Print welcome message                           |\n'
-               ' ===========================================================[/#7289DA]'
+               f'                                           [dark_orange]Available commands: [/dark_orange]\n' +
+               f'    [dark_orange]░█▀▀░█░█░█░█░█▀▄░█▀▄░█▀▀░█▀█░█▀▄░█▀▄[/dark_orange]     :li - List Guilds & Channels\n' +
+               f'    [dark_orange]░█░░░█▀█░█░█░█▀▄░█▀▄░█░░░█░█░█▀▄░█░█[/dark_orange]     :dm - List Friends DM \n' +
+               f'    [dark_orange]░▀▀▀░▀░▀░▀▀▀░▀▀░░▀▀░░▀▀▀░▀▀▀░▀░▀░▀▀░[/dark_orange]     :attach - Attach a file\n' +
+               f'                                             :help - Full command list\n' +
+               f'          Logged in as: [dark_orange]{whoami}[/dark_orange]           :q  - Exit chubbcord\n[/#7289DA]'
                )
 
     def main_loop(self):
@@ -739,20 +765,19 @@ class MyClient():
                 time.sleep(0.1)
 
     def clean(self):
-        """ Clean the tmp folder """
+        """ Clean the .chubbcord folder """
 
-        for file in os.listdir('./tmp'):
-            os.remove(f'./tmp/{file}')
-        os.rmdir('./tmp')
+        for file in os.listdir(f'{confdir}/tmp'):
+            os.remove(f'{confdir}/tmp/{file}')
 
     def main(self):
         """
         The main function starts a thread for the main loop and then waits for user input to send a
         message.
         """
-        os.system(
-            f'termtitle "chubbcord: a discord client -- {self.get_username_from_id(self.user_id)}"'
-        )
+
+        os.system(f'termtitle "chubbcord: a discord client -- {self.get_username_from_id(self.user_id)}"')
+
         self.print_welcome()
 
         self.running = False
@@ -760,7 +785,6 @@ class MyClient():
 
         def query_data():
             """ Query data from Discord API in a thread """
-
             self.list_friends()
             self.rprint_friends()
             self.list_guilds()
@@ -772,17 +796,16 @@ class MyClient():
             :param symbol: the current symbol of the loading bar
             :return: the next symbol of the loading bar
             """
-
-            symbols = ['|', '/', '-', '\\']
+            symbols = [' ', '/', '-', '\\']
             return symbols[symbols.index(symbol) + 1] if symbols.index(symbol) < 3 else symbols[0]
 
         query_data_thread = threading.Thread(target=query_data)
         query_data_thread.start()
 
-        symbol = '|'
+        symbol = ' '
         while query_data_thread.is_alive():
             symbol = loading_bar(symbol)
-            print(f'Loading... {loading_bar(symbol)}', end='\r')
+            print(f' Loading... {loading_bar(symbol)}', end='\r')
             time.sleep(0.1)
 
         for guild in self.guilds:
@@ -791,30 +814,44 @@ class MyClient():
 
         if not self.args.channel:
             while self.args.channel is None:
-                command = input('            \r >>> ')
-                if command == ':cr' or ':attach' in command:
-                    print('Please, select a channel first')
-                else:
-                    self.internal_command(command)
+                try:
+                    with patch_stdout(raw=True):
+                        command = prompt(' READY >> ')
+                    if command == ':cr' or ':attach' in command:
+                        print('Please, select a channel first')
+                    else:
+                        self.internal_command(command)
+                except KeyboardInterrupt:
+                    if self.running:
+                        self.kill_thread = True
+                        self.main_loop_thread.join()
+                    self.clean()
+                    sys.exit()
+
         else:
             self.main_loop_thread = threading.Thread(target=self.main_loop)
             self.main_loop_thread.start()
             self.refresh_screen()
 
-        commands_list = [':q', ':help', ':cr', ':li', ':fr', ':we']
+        commands_list = [':q', ':help', ':cr', ':li', ':dm', ':we']
 
         while 1:
             try:
                 time.sleep(1)
-                content = input()
+                with patch_stdout(raw=True):
+                    content = prompt(' >> ', wrap_lines=False, multiline=False)
                 if content != '' and ':attach' not in content and content not in commands_list:
                     message_sent = self.send_message(content)
+                if content == '':
+                    self.refresh_screen()
+                    self.internal_command(content)
                 else:
                     self.internal_command(content)
 
             except KeyboardInterrupt:
-                self.kill_thread = True
-                self.main_loop_thread.join()
+                if self.running:
+                    self.kill_thread = True
+                    self.main_loop_thread.join()
                 self.clean()
                 sys.exit()
 
