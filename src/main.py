@@ -354,18 +354,21 @@ class MyClient():
         code is 200. Otherwise, it returns the user_id itself.
         """
 
-        response = requests.get(
-            f'https://discordlookup.mesalytic.moe/v1/user/{user_id}',
-            timeout=5
-        )
+        try:
+            response = requests.get(
+                f'https://discordlookup.mesalytic.moe/v1/user/{user_id}',
+                timeout=5
+            )
 
-        if response.status_code != 200:
-            if 'rate limited' in response.text:
-                time.sleep(2)
-                return self.get_username_from_id(user_id)
+            if response.status_code != 200:
+                if 'rate limited' in response.text:
+                    time.sleep(2)
+                    return self.get_username_from_id(user_id)
+                return user_id
+
+            return response.json()['username']
+        except:
             return user_id
-
-        return response.json()['username']
 
     def request_upload_attachment(self, path, size):
         """
@@ -776,7 +779,10 @@ class MyClient():
         message.
         """
 
-        os.system(f'termtitle "chubbcord: a discord client -- {self.get_username_from_id(self.user_id)}"')
+        try:
+            os.system(f'termtitle "chubbcord: a discord client -- {self.get_username_from_id(self.user_id)}"')
+        except:
+            pass
 
         self.print_welcome()
 
